@@ -1,2 +1,3 @@
 # EXplorativeDT
-RESEARCH
+RESEARCH Project
+
