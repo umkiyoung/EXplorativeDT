@@ -1,0 +1,5 @@
+[default]
+entity = jaewoolee
+project = online-dt
+base_url = https://api.wandb.ai
+

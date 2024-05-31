@@ -6,6 +6,8 @@ LICENSE.md file in the root directory of this source tree.
 """
 
 import os
+os.environ['D4RL_SUPPRESS_IMPORT_ERROR'] = "1"
+
 import argparse
 import pickle
 import random
@@ -15,6 +17,7 @@ import d4rl
 import torch
 import numpy as np
 from tqdm import tqdm
+import wandb
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -27,10 +30,8 @@ from pathlib import Path
 from decision_transformer import DecisionTransformer
 from evaluation import create_vec_eval_episodes_fn, vec_evaluate_episode_rtg
 from trainer import SequenceTrainer
-# from logger import Logger
 
 MAX_EPISODE_LEN = 1000
-os.environ['D4RL_SUPPRESS_IMPORT_ERROR'] = "1"
 
 
 class Experiment:
@@ -91,7 +92,8 @@ class Experiment:
         self.total_transitions_sampled = 0
         self.variant = variant
         self.reward_scale = 1.0 if "antmaze" in variant["env"] else 0.001
-        # self.logger = Logger(variant)
+        self.logger = utils.wandb_init(variant)
+
 
     def _get_env_spec(self, variant):
         env = gym.make(variant["env"])
@@ -247,6 +249,7 @@ class Experiment:
             log_temperature_optimizer=self.log_temperature_optimizer,
             scheduler=self.scheduler,
             device=self.device,
+            pretraining=True
         )
 
         with tqdm(total=self.variant['max_pretrain_iters'], position=0, desc='Pretraining') as pbar:
@@ -274,12 +277,7 @@ class Experiment:
                 outputs.update(train_outputs)
                 outputs.update(eval_outputs)
                 pbar.set_description(f"Pretraining | evaluation: {eval_reward:.1f}")
-                # self.logger.log_metrics(
-                #     outputs,
-                #     iter_num=self.pretrain_iter,
-                #     total_transitions_sampled=self.total_transitions_sampled,
-                #     writer=writer,
-                # )
+                
 
                 # self._save_model(
                 #     path_prefix=self.logger.log_path,
@@ -302,15 +300,14 @@ class Experiment:
         return outputs, eval_reward
 
     def online_tuning(self, online_envs, eval_envs, loss_fn):
-
         print("\n\n\n*** Online Finetuning ***")
-
         trainer = SequenceTrainer(
             model=self.model,
             optimizer=self.optimizer,
             log_temperature_optimizer=self.log_temperature_optimizer,
             scheduler=self.scheduler,
             device=self.device,
+            pretraining=False
         )
         eval_fns = [
             create_vec_eval_episodes_fn(
@@ -361,6 +358,8 @@ class Experiment:
                 train_outputs = trainer.train_iteration(
                     loss_fn=loss_fn,
                     dataloader=dataloader,
+                    finetuning_epoch=self.online_iter,
+                    pretraining_epoch=self.variant["max_pretrain_iters"]
                 )
                 outputs.update(train_outputs)
 
@@ -370,7 +369,7 @@ class Experiment:
                     pbar.set_description(f"Finetuning | evaluation: {eval_reward:.1f}")
 
                 outputs["time/total"] = time.time() - self.start_time
-
+                
                 # log the metrics
                 # self.logger.log_metrics(
                 #     outputs,
@@ -469,6 +468,12 @@ class Experiment:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    
+    # wandb logger
+    parser.add_argument("--group", type=str, default='online DT')
+    parser.add_argument("--name", type=str, default='online DT')
+    
+    # seed and env
     parser.add_argument("--seed", type=int, default=10)
     parser.add_argument("--env", type=str, default="hopper-medium-v2")
 

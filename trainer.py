@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import time
 from tqdm import tqdm
+import wandb
 
 class SequenceTrainer:
     def __init__(
@@ -18,6 +19,7 @@ class SequenceTrainer:
         log_temperature_optimizer,
         scheduler=None,
         device="cuda",
+        pretraining=False,
     ):
         self.model = model
         self.optimizer = optimizer
@@ -25,11 +27,17 @@ class SequenceTrainer:
         self.scheduler = scheduler
         self.device = device
         self.start_time = time.time()
+        if pretraining:
+            self.pretraining = "pretraining"
+        else:
+            self.pretraining = 'finetuning'
 
     def train_iteration(
         self,
         loss_fn,
         dataloader,
+        finetuning_epoch=0,
+        pretraining_epoch=0,
     ):
 
         losses, nlls, entropies = [], [], []
@@ -37,18 +45,28 @@ class SequenceTrainer:
         train_start = time.time()
 
         self.model.train()
-        for _, trajs in enumerate(tqdm(dataloader, position=1, leave=False)):
+        for idx, trajs in enumerate(tqdm(dataloader, position=1, leave=False)):
             loss, nll, entropy = self.train_step_stochastic(loss_fn, trajs)
             losses.append(loss)
             nlls.append(nll)
             entropies.append(entropy)
-
+            wandb.log({
+                f"{self.pretraining}/train_loss": np.mean(loss),
+                f"{self.pretraining}/nll": nll,
+                f"{self.pretraining}/entropy": entropy,
+                f"{self.pretraining}/temp_value": self.model.temperature().detach().cpu().item(),
+            },
+            step=idx + dataloader.__len__() * finetuning_epoch + pretraining_epoch)
+            print(idx + dataloader.__len__() * finetuning_epoch + pretraining_epoch)
+            print(idx + dataloader.__len__() * finetuning_epoch + pretraining_epoch)
+            print(idx + dataloader.__len__() * finetuning_epoch + pretraining_epoch)
+            print(idx + dataloader.__len__() * finetuning_epoch + pretraining_epoch)
         logs["time/training"] = time.time() - train_start
-        logs["training/train_loss_mean"] = np.mean(losses)
-        logs["training/train_loss_std"] = np.std(losses)
-        logs["training/nll"] = nlls[-1]
-        logs["training/entropy"] = entropies[-1]
-        logs["training/temp_value"] = self.model.temperature().detach().cpu().item()
+        logs[f"{self.pretraining}/train_loss_mean"] = np.mean(losses)
+        logs[f"{self.pretraining}/train_loss_std"] = np.std(losses)
+        #logs["training/nll"] = nlls[-1]
+        #logs["training/entropy"] = entropies[-1]
+        #logs["training/temp_value"] = self.model.temperature().detach().cpu().item()
 
         return logs
 
