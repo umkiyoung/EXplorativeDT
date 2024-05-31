@@ -227,7 +227,7 @@ class Experiment:
         }
 
     def pretrain(self, eval_envs, loss_fn):
-        print("\n\n\n*** Pretrain ***")
+        
 
         eval_fns = [
             create_vec_eval_episodes_fn(
@@ -251,41 +251,45 @@ class Experiment:
             device=self.device,
             pretraining=True
         )
+        
+        if self.variant['max_pretrain_iters'] > 0:
+            print("\n\n\n*** Pretrain ***")
+            with tqdm(total=self.variant['max_pretrain_iters'], position=0, desc='Pretraining') as pbar:
+                while self.pretrain_iter < self.variant["max_pretrain_iters"]:
+                    # in every iteration, prepare the data loader
+                    dataloader = create_dataloader(
+                        trajectories=self.offline_trajs,
+                        num_iters=self.variant["num_updates_per_pretrain_iter"],
+                        batch_size=self.variant["batch_size"],
+                        max_len=self.variant["K"],
+                        state_dim=self.state_dim,
+                        act_dim=self.act_dim,
+                        state_mean=self.state_mean,
+                        state_std=self.state_std,
+                        reward_scale=self.reward_scale,
+                        action_range=self.action_range,
+                    )
 
-        with tqdm(total=self.variant['max_pretrain_iters'], position=0, desc='Pretraining') as pbar:
-            while self.pretrain_iter < self.variant["max_pretrain_iters"]:
-                # in every iteration, prepare the data loader
-                dataloader = create_dataloader(
-                    trajectories=self.offline_trajs,
-                    num_iters=self.variant["num_updates_per_pretrain_iter"],
-                    batch_size=self.variant["batch_size"],
-                    max_len=self.variant["K"],
-                    state_dim=self.state_dim,
-                    act_dim=self.act_dim,
-                    state_mean=self.state_mean,
-                    state_std=self.state_std,
-                    reward_scale=self.reward_scale,
-                    action_range=self.action_range,
-                )
+                    train_outputs = trainer.train_iteration(
+                        loss_fn=loss_fn,
+                        dataloader=dataloader,
+                    )
+                    eval_outputs, eval_reward = self.evaluate(eval_fns)
+                    outputs = {"time/total": time.time() - self.start_time}
+                    outputs.update(train_outputs)
+                    outputs.update(eval_outputs)
+                    pbar.set_description(f"Pretraining | evaluation: {eval_reward:.1f}")
+                    wandb.log(outputs, commit=True)
 
-                train_outputs = trainer.train_iteration(
-                    loss_fn=loss_fn,
-                    dataloader=dataloader,
-                )
-                eval_outputs, eval_reward = self.evaluate(eval_fns)
-                outputs = {"time/total": time.time() - self.start_time}
-                outputs.update(train_outputs)
-                outputs.update(eval_outputs)
-                pbar.set_description(f"Pretraining | evaluation: {eval_reward:.1f}")
-                
+                    # self._save_model(
+                    #     path_prefix=self.logger.log_path,
+                    #     is_pretrain_model=True,
+                    # )
 
-                # self._save_model(
-                #     path_prefix=self.logger.log_path,
-                #     is_pretrain_model=True,
-                # )
-
-                self.pretrain_iter += 1
-                pbar.update(1)
+                    self.pretrain_iter += 1
+                    pbar.update(1)
+        
+        print("Skipped pretraining. starting scratch online training...")
 
     def evaluate(self, eval_fns):
         eval_start = time.time()
@@ -359,7 +363,7 @@ class Experiment:
                     loss_fn=loss_fn,
                     dataloader=dataloader,
                     finetuning_epoch=self.online_iter,
-                    pretraining_epoch=self.variant["max_pretrain_iters"]
+                    pretraining_epoch=self.variant["num_updates_per_pretrain_iter"]
                 )
                 outputs.update(train_outputs)
 
@@ -369,6 +373,7 @@ class Experiment:
                     pbar.set_description(f"Finetuning | evaluation: {eval_reward:.1f}")
 
                 outputs["time/total"] = time.time() - self.start_time
+                wandb.log(outputs, commit=True)
                 
                 # log the metrics
                 # self.logger.log_metrics(
@@ -485,6 +490,7 @@ if __name__ == "__main__":
     parser.add_argument("--activation_function", type=str, default="relu")
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--eval_context_length", type=int, default=5)
+    
     # 0: no pos embedding others: absolute ordering
     parser.add_argument("--ordering", type=int, default=0)
 
@@ -501,7 +507,7 @@ if __name__ == "__main__":
 
     # pretraining options
     parser.add_argument("--max_pretrain_iters", type=int, default=1)
-    parser.add_argument("--num_updates_per_pretrain_iter", type=int, default=50)
+    parser.add_argument("--num_updates_per_pretrain_iter", type=int, default=29)
 
     # finetuning options
     parser.add_argument("--max_online_iters", type=int, default=1500)
@@ -509,7 +515,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_online_rollouts", type=int, default=1)
     parser.add_argument("--replay_size", type=int, default=1000)
     parser.add_argument("--num_updates_per_online_iter", type=int, default=300)
-    parser.add_argument("--eval_interval", type=int, default=1)
+    parser.add_argument("--eval_interval", type=int, default=10)
 
     # environment options
     parser.add_argument("--device", type=str, default="cuda")
