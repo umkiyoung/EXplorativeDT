@@ -286,7 +286,7 @@ class Experiment:
                     outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'])})
                     outputs.update(train_outputs)
                     outputs.update(eval_outputs)
-                    pbar.set_description(f"Pretraining | evaluation: {eval_reward:.1f}")
+                    pbar.set_description(f"Pretraining | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']):.1f}")
                     wandb.log(outputs, commit=True)
 
                     # self._save_model(
@@ -379,7 +379,7 @@ class Experiment:
                     eval_outputs, eval_reward = self.evaluate(eval_fns)
                     outputs.update(eval_outputs)
                     outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'])})
-                    pbar.set_description(f"Finetuning | evaluation: {eval_reward:.1f}")
+                    pbar.set_description(f"Finetuning | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']):.1f}")
                     
                 outputs["time/total"] = time.time() - self.start_time
                 wandb.log(outputs, commit=True)
