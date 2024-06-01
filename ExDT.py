@@ -27,7 +27,7 @@ from replay_buffer import ReplayBuffer, create_dataloader
 from lamb import Lamb
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from pathlib import Path
-from decision_transformer import DecisionTransformer
+from decision_transformer import DecisionTransformer, ValueDecisionTransformer
 from evaluation import create_vec_eval_episodes_fn, vec_evaluate_episode_rtg
 from trainer import SequenceTrainer
 

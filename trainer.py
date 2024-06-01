@@ -11,6 +11,8 @@ import time
 from tqdm import tqdm
 import wandb
 
+from loss import losses
+
 class SequenceTrainer:
     def __init__(
         self,
@@ -77,6 +79,11 @@ class SequenceTrainer:
             ordering,
             padding_mask,
         ) = trajs
+        
+        try:
+            loss_function = losses[loss_fn]
+        except:
+            raise ValueError(f"the loss function type {loss_fn} is unknown. There exists {losses.keys()} loss functions.")
 
         states = states.to(self.device)
         actions = actions.to(self.device)
@@ -99,7 +106,7 @@ class SequenceTrainer:
             padding_mask=padding_mask,
         )
 
-        loss, nll, entropy = loss_fn(
+        loss, nll, entropy = loss_function(
             action_preds,  # a_hat_dist
             action_target,
             padding_mask,
@@ -199,6 +206,26 @@ class ValueSequenceTrainer(SequenceTrainer):
             ordering,
             padding_mask=padding_mask,
         )
+        
+        
+        # Loss function example -> main.py
+        # def loss_fn(
+        #     a_hat_dist,
+        #     a,
+        #     attention_mask,
+        #     entropy_reg,
+        # ):
+        #     # a_hat is a SquashedNormal Distribution
+        #     log_likelihood = a_hat_dist.log_likelihood(a)[attention_mask > 0].mean()
+
+        #     entropy = a_hat_dist.entropy().mean()
+        #     loss = -(log_likelihood + entropy_reg * entropy)
+
+        #     return (
+        #         loss,
+        #         -log_likelihood,
+        #         entropy,
+        #     )
 
         loss, nll, entropy = loss_fn(
             action_preds,  # a_hat_dist
@@ -207,7 +234,7 @@ class ValueSequenceTrainer(SequenceTrainer):
             self.model.temperature().detach(),  # no gradient taken here
         )
         
-        td_loss = value_loss_fn( # add value loss function
+        td_loss = value _loss_fn( # add value loss function
             value_preds,
             value_target
         )
