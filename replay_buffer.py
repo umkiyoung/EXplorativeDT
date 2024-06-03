@@ -64,6 +64,8 @@ class SubTrajectory(torch.utils.data.Dataset):
         return len(self.sampling_ind)
 
 
+
+
 class TransformSamplingSubTraj:
     def __init__(
         self,
@@ -74,7 +76,9 @@ class TransformSamplingSubTraj:
         state_std,
         reward_scale,
         action_range,
+        gamma=0.99
     ):
+    
         super().__init__()
         self.max_len = max_len
         self.state_dim = state_dim
@@ -82,6 +86,7 @@ class TransformSamplingSubTraj:
         self.state_mean = state_mean
         self.state_std = state_std
         self.reward_scale = reward_scale
+        self.gamma = gamma
 
         # For some datasets there are actions with values 1.0/-1.0 which is problematic
         # for the SquahsedNormal distribution. The inversed tanh transformation will
@@ -113,8 +118,13 @@ class TransformSamplingSubTraj:
         rtg = discount_cumsum(traj["rewards"][si:], gamma=1.0)[: tlen + 1].reshape(
             -1, 1
         )
-        if rtg.shape[0] <= tlen:
+            
+        value = discount_cumsum(traj["rewards"][si:], gamma=self.gamma)[: tlen + 1].reshape(
+            -1, 1
+        )
+        if value.shape[0] <= tlen:
             rtg = np.concatenate([rtg, np.zeros((1, 1))])
+            value = np.concatenate([value, np.zeros((1, 1))])
 
         # padding and state + reward normalization
         act_len = aa.shape[0]
@@ -131,6 +141,10 @@ class TransformSamplingSubTraj:
             np.concatenate([np.zeros((self.max_len - tlen, 1)), rtg])
             * self.reward_scale
         )
+        value = ( # value appended for PPO
+            np.concatenate([np.zeros((self.max_len - tlen, 1)), value])
+            * self.reward_scale
+        )
         timesteps = np.concatenate([np.zeros((self.max_len - tlen)), timesteps])
         ordering = np.concatenate([np.zeros((self.max_len - tlen)), ordering])
         padding_mask = np.concatenate([np.zeros(self.max_len - tlen), np.ones(tlen)])
@@ -140,11 +154,12 @@ class TransformSamplingSubTraj:
         rr = torch.from_numpy(rr).to(dtype=torch.float32)
         dd = torch.from_numpy(dd).to(dtype=torch.long)
         rtg = torch.from_numpy(rtg).to(dtype=torch.float32)
+        value = torch.from_numpy(value).to(dtype=torch.float32)
         timesteps = torch.from_numpy(timesteps).to(dtype=torch.long)
         ordering = torch.from_numpy(ordering).to(dtype=torch.long)
         padding_mask = torch.from_numpy(padding_mask)
 
-        return ss, aa, rr, dd, rtg, timesteps, ordering, padding_mask
+        return ss, aa, rr, dd, rtg, value, timesteps, ordering, padding_mask
 
 
 def create_dataloader(
