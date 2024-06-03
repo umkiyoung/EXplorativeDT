@@ -29,7 +29,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from pathlib import Path
 from decision_transformer import DecisionTransformer, ValueDecisionTransformer
 from evaluation import create_vec_eval_episodes_fn, vec_evaluate_episode_rtg
-from trainer import SequenceTrainer
+from trainer import SequenceTrainer, ValueSequenceTrainer
 
 MAX_EPISODE_LEN = 1000
 
@@ -55,7 +55,7 @@ class Experiment:
 
         self.device = variant.get("device", "cuda")
         self.target_entropy = -self.act_dim
-        self.model = DecisionTransformer(
+        self.model = ValueDecisionTransformer(
             state_dim=self.state_dim,
             act_dim=self.act_dim,
             action_range=self.action_range,
@@ -74,6 +74,7 @@ class Experiment:
             ordering=variant["ordering"],
             init_temperature=variant["init_temperature"],
             target_entropy=self.target_entropy,
+            gamma=variant['gamma']
         ).to(device=self.device)
 
         self.optimizer = Lamb(
@@ -82,6 +83,14 @@ class Experiment:
             weight_decay=variant["weight_decay"],
             eps=1e-8,
         )
+        
+        self.value_optimizer = Lamb(
+            self.model.parameters(),
+            lr=variant["learning_rate"],
+            weight_decay=variant["weight_decay"],
+            eps=1e-8
+        )
+        
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(
             self.optimizer, lambda steps: min((steps + 1) / variant["warmup_steps"], 1)
         )
@@ -250,10 +259,11 @@ class Experiment:
             )
         ]
 
-        trainer = SequenceTrainer(
+        trainer = ValueSequenceTrainer(
             model=self.model,
             optimizer=self.optimizer,
             log_temperature_optimizer=self.log_temperature_optimizer,
+            value_optimizer=self.value_optimizer,
             scheduler=self.scheduler,
             device=self.device,
             pretraining=True
@@ -286,7 +296,7 @@ class Experiment:
                     outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'])})
                     outputs.update(train_outputs)
                     outputs.update(eval_outputs)
-                    pbar.set_description(f"Pretraining | evaluation: {eval_reward:.1f}")
+                    pbar.set_description(f"Pretraining | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']):.1f}")
                     wandb.log(outputs, commit=True)
 
                     # self._save_model(
@@ -313,10 +323,11 @@ class Experiment:
 
     def online_tuning(self, online_envs, eval_envs, loss_fn):
         print("\n\n\n*** Online Finetuning ***")
-        trainer = SequenceTrainer(
+        trainer = ValueSequenceTrainer(
             model=self.model,
             optimizer=self.optimizer,
             log_temperature_optimizer=self.log_temperature_optimizer,
+            value_optimizer=self.value_optimizer,
             scheduler=self.scheduler,
             device=self.device,
             pretraining=False
@@ -379,7 +390,7 @@ class Experiment:
                     eval_outputs, eval_reward = self.evaluate(eval_fns)
                     outputs.update(eval_outputs)
                     outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'])})
-                    pbar.set_description(f"Finetuning | evaluation: {eval_reward:.1f}")
+                    pbar.set_description(f"Finetuning | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']):.1f}")
                     
                 outputs["time/total"] = time.time() - self.start_time
                 wandb.log(outputs, commit=True)
@@ -406,7 +417,8 @@ class Experiment:
 
         import d4rl
 
-        loss_fn = self.variant['loss_fn']
+        pretrain_loss_fn = self.variant['pretrain_loss_fn']
+        finetune_loss_fn = self.variant['finetune_loss_fn']
 
         def get_env_builder(seed, env_name, target_goal=None):
             def make_env_fn():
@@ -448,7 +460,7 @@ class Experiment:
 
         self.start_time = time.time()
         if self.variant["max_pretrain_iters"]:
-            self.pretrain(eval_envs, loss_fn)
+            self.pretrain(eval_envs, pretrain_loss_fn)
 
         if self.variant["max_online_iters"]:
             print("\n\nMaking Online Env.....")
@@ -458,7 +470,7 @@ class Experiment:
                     for i in range(self.variant["num_online_rollouts"])
                 ]
             )
-            self.online_tuning(online_envs, eval_envs, loss_fn)
+            self.online_tuning(online_envs, eval_envs, finetune_loss_fn)
             online_envs.close()
 
         eval_envs.close()
@@ -468,8 +480,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     # wandb logger
-    parser.add_argument("--group", type=str, default='online DT')
-    parser.add_argument("--name", type=str, default='online DT')
+    parser.add_argument("--group", type=str, default='ExDT')
+    parser.add_argument("--name", type=str, default='ExDT')
+    
+    # ExDT hyperparameter
+    parser.add_argument("--gamma", type=float, default=0.99)
     
     # seed and env
     parser.add_argument("--seed", type=int, default=10)
@@ -485,7 +500,8 @@ if __name__ == "__main__":
     parser.add_argument("--eval_context_length", type=int, default=5)
     
     # loss function options
-    parser.add_argument('--loss_fn', type=str, default='ODT')
+    parser.add_argument('--pretrain_loss_fn', type=str, default='PPO')
+    parser.add_argument('--finetune_loss_fn', type=str, default='PPO')
     
     # 0: no pos embedding others: absolute ordering
     parser.add_argument("--ordering", type=int, default=0)
@@ -511,8 +527,8 @@ if __name__ == "__main__":
     parser.add_argument("--online_rtg", type=int, default=7200)
     parser.add_argument("--num_online_rollouts", type=int, default=1)
     parser.add_argument("--replay_size", type=int, default=1000)
-    parser.add_argument("--num_updates_per_online_iter", type=int, default=300)
-    parser.add_argument("--eval_interval", type=int, default=10)
+    parser.add_argument("--num_updates_per_online_iter", type=int, default=30)
+    parser.add_argument("--eval_interval", type=int, default=1)
 
     # environment options
     parser.add_argument("--device", type=str, default="cuda")
