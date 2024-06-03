@@ -427,6 +427,7 @@ class ValueDecisionTransformer(DecisionTransformer):
         stochastic_policy=False,
         init_temperature=0.1,
         target_entropy=None,
+        gamma=0.99,
         **kwargs
     ):
         super().__init__(
@@ -434,18 +435,19 @@ class ValueDecisionTransformer(DecisionTransformer):
             act_dim,
             hidden_size,
             action_range,
-            ordering=0,
-            max_length=None,
-            eval_context_length=None,
-            max_ep_len=4096,
-            action_tanh=True,
-            stochastic_policy=False,
-            init_temperature=0.1,
-            target_entropy=None,
+            ordering,
+            max_length,
+            eval_context_length,
+            max_ep_len,
+            action_tanh,
+            stochastic_policy,
+            init_temperature,
+            target_entropy,
             **kwargs
         )
 
-        self.predict_value = torch.nn.Linear(self.state_dim, 1)
+        self.gamma = gamma
+        self.predict_value = torch.nn.Linear(hidden_size, 1)
 
 
     def forward(
@@ -498,7 +500,7 @@ class ValueDecisionTransformer(DecisionTransformer):
         )
 
         # we feed in the input embeddings (not word indices as in NLP) to the model
-        transformer_outputs = self.transformer(
+        transformer_outputs = self.transformer( ## TODO It is the where the uncontrolled error propagates
             inputs_embeds=stacked_inputs,
             attention_mask=stacked_padding_mask,
         )
