@@ -117,7 +117,7 @@ def vec_evaluate_episode_rtg(
             dim=1,
         )
 
-        state_pred, action_dist, reward_pred = model.get_predictions(
+        predictions = model.get_predictions(
             (states.to(dtype=torch.float32) - state_mean) / state_std,
             actions.to(dtype=torch.float32),
             rewards.to(dtype=torch.float32),
@@ -125,6 +125,9 @@ def vec_evaluate_episode_rtg(
             timesteps.to(dtype=torch.long),
             num_envs=num_envs,
         )
+        state_pred, action_dist, reward_pred, = predictions[0], predictions[1], predictions[2]
+        
+        
         state_pred = state_pred.detach().cpu().numpy().reshape(num_envs, -1)
         reward_pred = reward_pred.detach().cpu().numpy().reshape(num_envs)
 
