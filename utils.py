@@ -33,6 +33,7 @@ def wandb_init(variant: dict) -> None:
     run = wandb.init(
         config=variant,
         project=f'ExDT-{variant["env"]}',
+        entity="ExDT",
         group=variant["group"],
         name=f"{variant['name']}-{variant['env']}-{str(uuid.uuid4())[:4]}",
         id=str(uuid.uuid4()),

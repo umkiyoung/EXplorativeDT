@@ -1,0 +1,24 @@
+{
+    "os": "Linux-5.15.0-71-generic-x86_64-with-glibc2.10",
+    "python": "3.8.5",
+    "heartbeatAt": "2024-06-04T09:19:48.056828",
+    "startedAt": "2024-06-04T09:19:46.394838",
+    "docker": null,
+    "gpu": "NVIDIA RTX A6000",
+    "gpu_count": 4,
+    "cpu_count": 128,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "ExDT.py",
+    "codePath": "ExDT.py",
+    "git": {
+        "remote": "git@github.com:umkiyoung/EXplorativeDT",
+        "commit": "4c3250e037eb44840ee680b7249c9f6358b1b3c6"
+    },
+    "email": "se99an@gmail.com",
+    "root": "/home/uky/repos_python/Research/EXplorativeDT",
+    "host": "SILAB-Alpaca",
+    "username": "uky",
+    "executable": "/home/uky/anaconda3/bin/python"
+}

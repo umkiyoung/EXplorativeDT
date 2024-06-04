@@ -256,7 +256,7 @@ class Experiment:
             log_temperature_optimizer=self.log_temperature_optimizer,
             scheduler=self.scheduler,
             device=self.device,
-            pretraining=True
+            pretraining=True,
         )
         
         if self.variant['num_updates_per_pretrain_iter'] > 0:

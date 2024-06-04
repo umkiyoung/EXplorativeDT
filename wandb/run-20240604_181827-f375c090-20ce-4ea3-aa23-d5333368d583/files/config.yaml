@@ -1,0 +1,137 @@
+wandb_version: 1
+
+K:
+  desc: null
+  value: 20
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.12.21
+    framework: huggingface
+    huggingface_version: 4.5.1
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.8.5
+    start_time: 1717492708
+    t:
+      1:
+      - 1
+      - 11
+      - 55
+      2:
+      - 1
+      - 11
+      - 55
+      3:
+      - 13
+      - 14
+      - 16
+      4: 3.8.5
+      5: 0.12.21
+      6: 4.5.1
+      8:
+      - 5
+      10:
+      - 3
+activation_function:
+  desc: null
+  value: relu
+batch_size:
+  desc: null
+  value: 256
+device:
+  desc: null
+  value: cuda
+dropout:
+  desc: null
+  value: 0.1
+embed_dim:
+  desc: null
+  value: 512
+env:
+  desc: null
+  value: hopper-medium-v2
+eval_context_length:
+  desc: null
+  value: 5
+eval_interval:
+  desc: null
+  value: 1
+eval_rtg:
+  desc: null
+  value: 3600
+exp_name:
+  desc: null
+  value: default
+finetune_loss_fn:
+  desc: null
+  value: PPO
+gamma:
+  desc: null
+  value: 0.99
+group:
+  desc: null
+  value: ExDT
+init_temperature:
+  desc: null
+  value: 0.1
+learning_from_offline_dataset:
+  desc: null
+  value: true
+learning_rate:
+  desc: null
+  value: 0.0001
+log_to_tb:
+  desc: null
+  value: true
+max_online_iters:
+  desc: null
+  value: 200
+max_pretrain_iters:
+  desc: null
+  value: 1
+n_head:
+  desc: null
+  value: 4
+n_layer:
+  desc: null
+  value: 4
+name:
+  desc: null
+  value: ExDT
+num_eval_episodes:
+  desc: null
+  value: 10
+num_online_rollouts:
+  desc: null
+  value: 1
+num_updates_per_online_iter:
+  desc: null
+  value: 30
+num_updates_per_pretrain_iter:
+  desc: null
+  value: 29
+online_rtg:
+  desc: null
+  value: 7200
+ordering:
+  desc: null
+  value: 0
+pretrain_loss_fn:
+  desc: null
+  value: PPO
+replay_size:
+  desc: null
+  value: 1000
+save_dir:
+  desc: null
+  value: ./exp
+seed:
+  desc: null
+  value: 10
+warmup_steps:
+  desc: null
+  value: 10000
+weight_decay:
+  desc: null
+  value: 0.0005

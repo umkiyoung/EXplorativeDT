@@ -1,0 +1,1 @@
+{"pretraining/train_loss": -0.06809305581881074, "pretraining/nll": -0.03606819361448288, "pretraining/entropy": 0.3391231894493103, "pretraining/temp_value": 0.09442619186462387, "_timestamp": 1717492071, "_runtime": 184, "_step": 1463, "_wandb": {"runtime": 185}}
