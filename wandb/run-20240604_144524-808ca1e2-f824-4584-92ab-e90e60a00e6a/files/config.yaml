@@ -1,0 +1,128 @@
+wandb_version: 1
+
+group:
+  desc: null
+  value: online DT
+name:
+  desc: null
+  value: online DT
+seed:
+  desc: null
+  value: 10
+env:
+  desc: null
+  value: hopper-medium-v2
+K:
+  desc: null
+  value: 20
+embed_dim:
+  desc: null
+  value: 512
+n_layer:
+  desc: null
+  value: 4
+n_head:
+  desc: null
+  value: 4
+activation_function:
+  desc: null
+  value: relu
+dropout:
+  desc: null
+  value: 0.1
+eval_context_length:
+  desc: null
+  value: 5
+loss_fn:
+  desc: null
+  value: ODT
+ordering:
+  desc: null
+  value: 0
+eval_rtg:
+  desc: null
+  value: 3600
+num_eval_episodes:
+  desc: null
+  value: 10
+init_temperature:
+  desc: null
+  value: 0.1
+batch_size:
+  desc: null
+  value: 256
+learning_rate:
+  desc: null
+  value: 0.0001
+weight_decay:
+  desc: null
+  value: 0.0005
+warmup_steps:
+  desc: null
+  value: 10000
+learning_from_offline_dataset:
+  desc: null
+  value: true
+max_pretrain_iters:
+  desc: null
+  value: 1
+num_updates_per_pretrain_iter:
+  desc: null
+  value: 29
+max_online_iters:
+  desc: null
+  value: 200
+online_rtg:
+  desc: null
+  value: 7200
+num_online_rollouts:
+  desc: null
+  value: 1
+replay_size:
+  desc: null
+  value: 1000
+num_updates_per_online_iter:
+  desc: null
+  value: 300
+eval_interval:
+  desc: null
+  value: 10
+device:
+  desc: null
+  value: cuda
+log_to_tb:
+  desc: null
+  value: true
+save_dir:
+  desc: null
+  value: ./exp
+exp_name:
+  desc: null
+  value: default
+_wandb:
+  desc: null
+  value:
+    python_version: 3.8.19
+    cli_version: 0.17.0
+    framework: huggingface
+    huggingface_version: 4.10.0
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1717479924
+    t:
+      1:
+      - 1
+      - 11
+      - 49
+      - 55
+      3:
+      - 13
+      - 14
+      - 16
+      - 23
+      4: 3.8.19
+      5: 0.17.0
+      6: 4.10.0
+      8:
+      - 5
+      13: linux-x86_64

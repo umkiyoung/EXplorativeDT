@@ -29,7 +29,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from pathlib import Path
 from decision_transformer import DecisionTransformer, ValueDecisionTransformer
 from evaluation import create_vec_eval_episodes_fn, vec_evaluate_episode_rtg
-from trainer import SequenceTrainer, ValueSequenceTrainer
+from trainer import SequenceTrainer
 
 MAX_EPISODE_LEN = 1000
 
@@ -259,7 +259,7 @@ class Experiment:
             )
         ]
 
-        trainer = ValueSequenceTrainer(
+        trainer = SequenceTrainer(
             model=self.model,
             optimizer=self.optimizer,
             log_temperature_optimizer=self.log_temperature_optimizer,
@@ -323,7 +323,7 @@ class Experiment:
 
     def online_tuning(self, online_envs, eval_envs, loss_fn):
         print("\n\n\n*** Online Finetuning ***")
-        trainer = ValueSequenceTrainer(
+        trainer = SequenceTrainer(
             model=self.model,
             optimizer=self.optimizer,
             log_temperature_optimizer=self.log_temperature_optimizer,
