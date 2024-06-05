@@ -247,8 +247,9 @@ class PPOLoss(LossAbstract):
                 1. - clip_range,
                 1. + clip_range
             )
-            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss))
             entropy = action_preds.entropy().mean()
+            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) - entropy # 06/05 entropy exploration addition 
+            
             ## TODO which is better? integrated loss or eval - improve iteration?
             
             policy_optimizer.zero_grad()
