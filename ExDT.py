@@ -294,7 +294,7 @@ class Experiment:
                     )
                     eval_outputs, eval_reward = self.evaluate(eval_fns)
                     outputs = {"time/total": time.time() - self.start_time}
-                    outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'])})
+                    outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']) * 100})
                     outputs.update(train_outputs)
                     outputs.update(eval_outputs)
                     pbar.set_description(f"Pretraining | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'] * 100):.1f}")
@@ -391,7 +391,7 @@ class Experiment:
                 if evaluation:
                     eval_outputs, eval_reward = self.evaluate(eval_fns)
                     outputs.update(eval_outputs)
-                    outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'])})
+                    outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']) * 100})
                     pbar.set_description(f"Finetuning | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'] * 100):.1f}")
                     
                 outputs["time/total"] = time.time() - self.start_time
@@ -530,7 +530,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_online_rollouts", type=int, default=1)
     parser.add_argument("--replay_size", type=int, default=1000)
     parser.add_argument("--num_updates_per_online_iter", type=int, default=30)
-    parser.add_argument("--eval_interval", type=int, default=1)
+    parser.add_argument("--eval_interval", type=int, default=10)
 
     # environment options
     parser.add_argument("--device", type=str, default="cuda")
