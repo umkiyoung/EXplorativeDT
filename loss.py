@@ -43,7 +43,7 @@ class ODTLoss(LossAbstract):
         
         action_target = actions.clone()
         
-        _, action_preds, _ = model.forward(
+        _, action_preds, _, _ = model.forward(
             states,
             actions,
             rewards,
