@@ -271,6 +271,7 @@ class Experiment:
         
         if self.variant['num_updates_per_pretrain_iter'] > 0:
             print("\n\n\n*** Pretrain ***")
+            print(f"Loss function configuration: {self.variant['pretrain_loss_fn']}")
             with tqdm(total=self.variant['max_pretrain_iters'], position=0, desc='Pretraining') as pbar:
                 while self.pretrain_iter < self.variant["max_pretrain_iters"]:
                     # in every iteration, prepare the data loader
@@ -296,7 +297,7 @@ class Experiment:
                     outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'])})
                     outputs.update(train_outputs)
                     outputs.update(eval_outputs)
-                    pbar.set_description(f"Pretraining | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']):.1f}")
+                    pbar.set_description(f"Pretraining | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'] * 100):.1f}")
                     wandb.log(outputs, commit=True)
 
                     # self._save_model(
@@ -323,6 +324,7 @@ class Experiment:
 
     def online_tuning(self, online_envs, eval_envs, loss_fn):
         print("\n\n\n*** Online Finetuning ***")
+        print(f"Loss function configuration: {self.variant['finetune_loss_fn']}")
         trainer = SequenceTrainer(
             model=self.model,
             optimizer=self.optimizer,
@@ -390,7 +392,7 @@ class Experiment:
                     eval_outputs, eval_reward = self.evaluate(eval_fns)
                     outputs.update(eval_outputs)
                     outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'])})
-                    pbar.set_description(f"Finetuning | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']):.1f}")
+                    pbar.set_description(f"Finetuning | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'] * 100):.1f}")
                     
                 outputs["time/total"] = time.time() - self.start_time
                 wandb.log(outputs, commit=True)
@@ -500,7 +502,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_context_length", type=int, default=5)
     
     # loss function options
-    parser.add_argument('--pretrain_loss_fn', type=str, default='PPO')
+    parser.add_argument('--pretrain_loss_fn', type=str, default='ODT')
     parser.add_argument('--finetune_loss_fn', type=str, default='PPO')
     
     # 0: no pos embedding others: absolute ordering
@@ -518,9 +520,9 @@ if __name__ == "__main__":
     parser.add_argument("--warmup_steps", type=int, default=10000)
 
     # pretraining options
-    parser.add_argument("--learning_from_offline_dataset", type=bool, default=True)
+    parser.add_argument("--learning_from_offline_dataset", type=bool, default=True) # if this is false, offline data is not adapted 
     parser.add_argument("--max_pretrain_iters", type=int, default=1)
-    parser.add_argument("--num_updates_per_pretrain_iter", type=int, default=29)
+    parser.add_argument("--num_updates_per_pretrain_iter", type=int, default=5000)
 
     # finetuning options
     parser.add_argument("--max_online_iters", type=int, default=200)
