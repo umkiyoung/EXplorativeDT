@@ -183,6 +183,7 @@ class PPOLoss(LossAbstract):
         value_optimizer,
         inner_epochs,
         clip_range,
+        entropy_reg,
         log_temperature_optimizer,
         scheduler=None,
         gamma=0.99
@@ -248,7 +249,7 @@ class PPOLoss(LossAbstract):
                 1. + clip_range
             )
             entropy = action_preds.entropy().mean()
-            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) - entropy # 06/05 entropy exploration addition 
+            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) - entropy_reg * entropy # 06/05 entropy exploration addition 
             
             ## TODO which is better? integrated loss or eval - improve iteration?
             
@@ -302,7 +303,8 @@ class ExDTLoss(LossAbstract):
             timesteps,
             ordering,
             padding_mask=padding_mask,
-        )        
+        )
+        
         # Policy Evaluation
         value_loss = torch.nn.functional.mse_loss(value_preds[padding_mask > 0], value_target.clone()[:, :-1, :][padding_mask > 0]) # Value target starts from 1 to make TD loss
         value_optimizer.zero_grad()
@@ -329,7 +331,7 @@ class ExDTLoss(LossAbstract):
         
         with torch.no_grad():
             behavioral_log_likelihood = action_preds.log_likelihood(action_target)[:, :-1][padding_mask[:, :-1] > 0].detach().clone()
-        
+
         for inner_epoch in tqdm(range(inner_epochs), desc='PPO loss propagation', position=2, leave=False):
             state_preds, action_preds, return_preds, value_preds = model.forward(
                 states,
@@ -353,16 +355,14 @@ class ExDTLoss(LossAbstract):
                 1. - clip_range,
                 1. + clip_range
             )
-            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss))
             entropy = action_preds.entropy().mean()
-            
+            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) # - entropy # 06/05 entropy exploration addition 
             bc_loss = action_preds.log_likelihood(action_target)[padding_mask > 0]
             
-            ## TODO which is better? integrated loss or eval - improve iteration?
-            
+            loss = ppo_loss + bc_loss
             policy_optimizer.zero_grad()
-            ppo_loss.backward() ## TODO is this the optimal solution?
-            policy_optimizer.step()    
+            loss.backward() ## TODO is this the optimal solution?
+            policy_optimizer.step()
             
         log_temperature_optimizer.zero_grad()
         temperature_loss = (
@@ -370,19 +370,17 @@ class ExDTLoss(LossAbstract):
         )
         temperature_loss.backward()
         log_temperature_optimizer.step()
-            
+        
         if scheduler is not None:
             scheduler.step()
-                   
         
         model.train()
         return (
-            ppo_loss,
-            -log_likelihood.mean(),
-            entropy,
-            value_loss
+            ppo_loss.detach().cpu().item(),
+            -log_likelihood.mean().detach().cpu().item(),
+            entropy.detach().cpu().item(),
+            value_loss.detach().cpu().item()
         )
-
 
 def get_loss_function(loss_name: str) -> LossAbstract:
     if loss_name == 'ODT':
