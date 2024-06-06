@@ -33,6 +33,9 @@ class ReplayBuffer(object):
             self.start_idx = (self.start_idx + len(new_trajs)) % self.capacity
 
         assert len(self.trajectories) <= self.capacity
+    
+    def reset(self):
+        self.trajectories = []
 
 class SubTrajectory(torch.utils.data.Dataset):
     def __init__(
