@@ -254,7 +254,7 @@ class PPOLoss(LossAbstract):
                 1. + clip_range
             )
             entropy = action_preds.entropy().mean()
-            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) #- entropy_reg * entropy # 06/05 entropy exploration addition 
+            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) - entropy_reg * entropy # 06/05 entropy exploration addition 
             
             ## TODO which is better? integrated loss or eval - improve iteration?
             
