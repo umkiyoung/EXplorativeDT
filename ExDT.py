@@ -325,6 +325,8 @@ class Experiment:
     def online_tuning(self, online_envs, eval_envs, loss_fn):
         print("\n\n\n*** Online Finetuning ***")
         print(f"Loss function configuration: {self.variant['finetune_loss_fn']}")
+        tuning_type = 'Off policy' if self.variant["off_policy_tuning"] else "On policy"
+        print(f"{tuning_type} training")
         trainer = SequenceTrainer(
             model=self.model,
             optimizer=self.optimizer,
@@ -351,6 +353,8 @@ class Experiment:
             while self.online_iter < self.variant["max_online_iters"]:
 
                 outputs = {}
+                if tuning_type == 'On policy':
+                    self.replay_buffer.reset()
                 augment_outputs = self._augment_trajectories(
                     online_envs,
                     self.variant["online_rtg"],
@@ -484,6 +488,7 @@ if __name__ == "__main__":
     # wandb logger
     parser.add_argument("--group", type=str, default='ExDT')
     parser.add_argument("--name", type=str, default='ExDT')
+    parser.add_argument("--tag", type=str, default='')
     
     # ExDT hyperparameter
     parser.add_argument("--gamma", type=float, default=0.99)
@@ -520,9 +525,10 @@ if __name__ == "__main__":
     parser.add_argument("--warmup_steps", type=int, default=10000)
 
     # pretraining options
+    parser.add_argument("--off_policy_tuning", type=bool, default=True)
     parser.add_argument("--learning_from_offline_dataset", type=bool, default=True) # if this is false, offline data is not adapted 
     parser.add_argument("--max_pretrain_iters", type=int, default=1)
-    parser.add_argument("--num_updates_per_pretrain_iter", type=int, default=5000)
+    parser.add_argument("--num_updates_per_pretrain_iter", type=int, default=50)
 
     # finetuning options
     parser.add_argument("--max_online_iters", type=int, default=200)
