@@ -186,7 +186,8 @@ class PPOLoss(LossAbstract):
         entropy_reg,
         log_temperature_optimizer,
         scheduler=None,
-        gamma=0.99
+        gamma=0.99,
+        max_grad_norm = 0.5
         ):
         state_preds, action_preds, return_preds, value_preds = model.forward(
             states,
@@ -202,6 +203,10 @@ class PPOLoss(LossAbstract):
         value_loss = torch.nn.functional.mse_loss(value_preds[padding_mask > 0], value_target.clone()[:, :-1, :][padding_mask > 0]) # Value target starts from 1 to make TD loss
         value_optimizer.zero_grad()
         value_loss.backward()
+        
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm) #grad norm add for spike prevention
+
+        
         value_optimizer.step()
         
         action_target = actions.clone()
@@ -255,6 +260,9 @@ class PPOLoss(LossAbstract):
             
             policy_optimizer.zero_grad()
             ppo_loss.backward() ## TODO is this the optimal solution?
+            
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm) #grad norm add for spike prevention
+            
             policy_optimizer.step()
             
         log_temperature_optimizer.zero_grad()
