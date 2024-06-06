@@ -25,7 +25,7 @@ class SequenceTrainer():
         scheduler=None,
         device="cuda",
         pretraining=False,
-        clip_range=0.2,
+        clip_range=1e-4,
         value_optimizer=None,
         inner_epochs=10,
     ):

@@ -239,9 +239,9 @@ class PPOLoss(LossAbstract):
             log_likelihood = action_preds.log_likelihood(action_target)[:, :-1][padding_mask[:, :-1] > 0]
             current_step_rewards = rewards[:, :-1, :]
             current_step_values = value_preds.detach().clone()[:, :-1, :] # make it sure to detach the grad graph
-            next_step_values = value_preds.detach().clone()[:, 1:, :]
+            next_step_values = value_preds.detach().clone()[:, 1:, :] # (batch_size, seq_len, )
             advantage = current_step_rewards + gamma * next_step_values - current_step_values 
-            ratio = torch.exp((log_likelihood - behavioral_log_likelihood).clamp_(max=20)) # preventing nan exploding
+            ratio = torch.exp((log_likelihood.mean() - behavioral_log_likelihood.mean()).clamp_(max=20)) # preventing nan exploding
             unclipped_loss = -advantage * ratio # adv weighted likelihood without last step
             clipped_loss = -advantage * torch.clamp(
                 ratio,
@@ -249,7 +249,7 @@ class PPOLoss(LossAbstract):
                 1. + clip_range
             )
             entropy = action_preds.entropy().mean()
-            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) - entropy_reg * entropy # 06/05 entropy exploration addition 
+            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) #- entropy_reg * entropy # 06/05 entropy exploration addition 
             
             ## TODO which is better? integrated loss or eval - improve iteration?
             

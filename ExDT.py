@@ -525,8 +525,8 @@ if __name__ == "__main__":
     parser.add_argument("--warmup_steps", type=int, default=10000)
 
     # pretraining options
-    parser.add_argument("--off_policy_tuning", type=bool, default=True)
-    parser.add_argument("--learning_from_offline_dataset", type=bool, default=True) # if this is false, offline data is not adapted 
+    parser.add_argument("--off_policy_tuning", default=False, action='store_true')
+    parser.add_argument("--learning_from_offline_dataset", default=False, action='store_true') # if this is false, offline data is not adapted 
     parser.add_argument("--max_pretrain_iters", type=int, default=1)
     parser.add_argument("--num_updates_per_pretrain_iter", type=int, default=50)
 
@@ -546,6 +546,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    ## print current args:
+    print("Current args:")
+    for arg in vars(args):
+        print(f"{arg}: {getattr(args, arg)}")
     utils.set_seed_everywhere(args.seed)
     experiment = Experiment(vars(args))
 
