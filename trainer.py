@@ -124,6 +124,7 @@ class SequenceTrainer():
                 value_optimizer=self.value_optimizer,
                 clip_range=self.clip_range,
                 inner_epochs=self.inner_epochs,
+                entropy_reg=self.model.temperature().detach(),
                 log_temperature_optimizer=self.log_temperature_optimizer,
                 scheduler=self.scheduler,
             )
