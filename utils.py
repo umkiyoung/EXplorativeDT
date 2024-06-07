@@ -32,10 +32,10 @@ def mkdir(path):
 def wandb_init(variant: dict) -> None:
     run = wandb.init(
         config=variant,
-        project=f"{variant['pretrain_loss_fn']}->{variant['finetune_loss_fn']}-{variant['env']}",
+        project=f"{variant['env']}",
         entity="ExDT",
         group=variant["group"],
-        name=f"{variant['name']}-{variant['env']}-{str(uuid.uuid4())[:4]}",
+        name=f"{variant['pretrain_loss_fn']}->{variant['finetune_loss_fn']}-{variant['env']}-{str(uuid.uuid4())[:4]}",
         id=str(uuid.uuid4()),
     )
     wandb.run.save()
