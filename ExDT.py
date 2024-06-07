@@ -109,7 +109,9 @@ class Experiment:
         self.variant = variant
         self.reward_scale = 1.0 if "antmaze" in variant["env"] else 0.001
         self.logger = utils.wandb_init(variant)
-
+        self.tuning_type = 'Off policy' if self.variant["off_policy_tuning"] else "On policy"
+        if (self.variant["off_policy_tuning"]) and (self.variant['finetune_loss_fn']=='PPO'):
+            raise ValueError(f"{self.tuning_type} and {self.variant['finetune_loss_fn']} are not compatible each other")
 
     def _get_env_spec(self, variant):
         env = gym.make(variant["env"])
@@ -299,11 +301,15 @@ class Experiment:
                         loss_fn=loss_fn,
                         dataloader=dataloader,
                     )
-                    eval_outputs, eval_reward = self.evaluate(eval_fns)
+                    
+                    if self.pretrain_iter % 1000 == 0:
+                        eval_outputs, eval_reward = self.evaluate(eval_fns)
+                        outputs.update(eval_outputs)
+                        outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']) * 100})
+
+                    
                     outputs = {"time/total": time.time() - self.start_time}
-                    outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']) * 100})
                     outputs.update(train_outputs)
-                    outputs.update(eval_outputs)
                     pbar.set_description(f"Pretraining | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'] * 100):.1f}")
                     wandb.log(outputs, commit=True)
 
@@ -332,8 +338,9 @@ class Experiment:
     def online_tuning(self, online_envs, eval_envs, loss_fn):
         print("\n\n\n*** Online Finetuning ***")
         print(f"Loss function configuration: {self.variant['finetune_loss_fn']}")
-        tuning_type = 'Off policy' if self.variant["off_policy_tuning"] else "On policy"
-        print(f"{tuning_type} training")
+        
+        
+        print(f"{self.tuning_type} training")
         trainer = SequenceTrainer(
             model=self.model,
             optimizer=self.optimizer,
@@ -360,7 +367,7 @@ class Experiment:
             while self.online_iter < self.variant["max_online_iters"]:
 
                 outputs = {}
-                if tuning_type == 'On policy':
+                if self.tuning_type == 'On policy':
                     self.replay_buffer.reset()
                 augment_outputs = self._augment_trajectories(
                     online_envs,
@@ -473,7 +480,7 @@ class Experiment:
         )
 
         self.start_time = time.time()
-        if not self.variant["load_from_pretrained_model"]:
+        if not self.variant["load_dir"]:
             # max_pretrain_iters determine the epochs of pretraining. If it is zero, skip the pretraining
             # If you want the offline data not to be loaded on replay buffer, set learning_from_offline_dataset False
             if self.variant["max_pretrain_iters"]: 
@@ -549,6 +556,7 @@ if __name__ == "__main__":
     # finetuning options
     parser.add_argument("--load_from_pretrained_model", default=False, action='store_true')
     parser.add_argument("--max_online_iters", type=int, default=200)
+    parser.add_argument("--max_online_steps", type=int, default=200000)
     parser.add_argument("--online_rtg", type=int, default=7200)
     parser.add_argument("--num_online_rollouts", type=int, default=1)
     parser.add_argument("--replay_size", type=int, default=1000)
@@ -561,8 +569,8 @@ if __name__ == "__main__":
     parser.add_argument("--exp_name", type=str, default="default")
     
     # save and load 
-    parser.add_argument("--save_dir", type=str, default="pretrained_policy")
-    parser.add_argument("--load_dir", type=str, default="pretrained_policy")
+    parser.add_argument("--save_dir", type=str, default="")
+    parser.add_argument("--load_dir", type=str, default="")
     
     args = parser.parse_args()
 
