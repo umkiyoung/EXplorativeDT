@@ -268,6 +268,8 @@ class Experiment:
             device=self.device,
             pretraining=True
         )
+                
+        
         
         if self.variant['num_updates_per_pretrain_iter'] > 0:
             print("\n\n\n*** Pretrain ***")
@@ -300,10 +302,10 @@ class Experiment:
                     pbar.set_description(f"Pretraining | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'] * 100):.1f}")
                     wandb.log(outputs, commit=True)
 
-                    # self._save_model(
+                    #self._save_model(
                     #     path_prefix=self.logger.log_path,
                     #     is_pretrain_model=True,
-                    # )
+                    #)
 
                     self.pretrain_iter += 1
                     pbar.update(1)
