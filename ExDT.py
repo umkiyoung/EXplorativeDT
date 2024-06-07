@@ -122,7 +122,7 @@ class Experiment:
         env.close()
         return state_dim, act_dim, action_range
 
-    def _save_model(self, path_prefix, is_pretrain_model=False):
+    def _save_model(self, path_prefix, is_pretrain_model=False):  
         to_save = {
             "model_state_dict": self.model.state_dict(),
             "optimizer_state_dict": self.optimizer.state_dict(),
@@ -136,18 +136,21 @@ class Experiment:
             "pytorch": torch.get_rng_state(),
             "log_temperature_optimizer_state_dict": self.log_temperature_optimizer.state_dict(),
         }
-
-        with open(f"{path_prefix}/model.pt", "wb") as f:
+        folderpath = f"{path_prefix}/{self.variant['pretrain_loss_fn']}"
+        # with open(f"{path_prefix}/model.pt", "wb") as f:
+        #     torch.save(to_save, f)
+        # print(f"\nModel saved at {path_prefix}/model.pt")
+        if not os.path.exists(folderpath):
+            os.makedirs(folderpath)
+        
+        with open(f"{folderpath}/{self.variant['pretrain_loss_fn']}_{self.variant['env']}.pt", "wb") as f:
             torch.save(to_save, f)
-        print(f"\nModel saved at {path_prefix}/model.pt")
-
-        if is_pretrain_model:
-            with open(f"{path_prefix}/pretrain_model.pt", "wb") as f:
-                torch.save(to_save, f)
-            print(f"Model saved at {path_prefix}/pretrain_model.pt")
+        print(f"Model saved at {folderpath}/{self.variant['pretrain_loss_fn']}_{self.variant['env']}.pt")
 
     def _load_model(self, path_prefix):
-        if Path(f"{path_prefix}/model.pt").exists():
+        folderpath = f"{path_prefix}/{self.variant['pretrain_loss_fn']}"
+        
+        if Path(f"{folderpath}/{self.variant['pretrain_loss_fn']}_{self.variant['env']}.pt").exists():
             with open(f"{path_prefix}/model.pt", "rb") as f:
                 checkpoint = torch.load(f)
             self.model.load_state_dict(checkpoint["model_state_dict"])
@@ -162,7 +165,9 @@ class Experiment:
             np.random.set_state(checkpoint["np"])
             random.setstate(checkpoint["python"])
             torch.set_rng_state(checkpoint["pytorch"])
-            print(f"Model loaded at {path_prefix}/model.pt")
+            print(f"Model loaded at {folderpath}/{self.variant['pretrain_loss_fn']}_{self.variant['env']}.pt")
+        else:
+            raise ValueError(f"There is no file at {folderpath}/{self.variant['pretrain_loss_fn']}_{self.variant['env']}.pt")
 
     def _load_dataset(self, env_name):
 
@@ -419,6 +424,7 @@ class Experiment:
                 self.online_iter += 1
                 pbar.update(1)
 
+
     def __call__(self):
 
         utils.set_seed_everywhere(args.seed)
@@ -467,8 +473,16 @@ class Experiment:
         )
 
         self.start_time = time.time()
-        if self.variant["max_pretrain_iters"]:
-            self.pretrain(eval_envs, pretrain_loss_fn)
+        if not self.variant["load_from_pretrained_model"]:
+            # max_pretrain_iters determine the epochs of pretraining. If it is zero, skip the pretraining
+            # If you want the offline data not to be loaded on replay buffer, set learning_from_offline_dataset False
+            if self.variant["max_pretrain_iters"]: 
+                self.pretrain(eval_envs, pretrain_loss_fn)
+                if self.variant["save_dir"]:
+                    self._save_model(self.variant['save_dir'], is_pretrain_model=True)
+        else:   
+            print("Skipped pretraining. starting online training with pretrained policy...")
+            self._load_model(self.variant['load_dir'])
 
         if self.variant["max_online_iters"]:
             print("\n\nMaking Online Env.....")
@@ -528,11 +542,12 @@ if __name__ == "__main__":
 
     # pretraining options
     parser.add_argument("--off_policy_tuning", default=False, action='store_true')
-    parser.add_argument("--learning_from_offline_dataset", default=False, action='store_true') # if this is false, offline data is not adapted 
+    parser.add_argument("--learning_from_offline_dataset", default=True, action='store_true') # if this is false, offline data is not adapted 
     parser.add_argument("--max_pretrain_iters", type=int, default=1)
     parser.add_argument("--num_updates_per_pretrain_iter", type=int, default=50)
 
     # finetuning options
+    parser.add_argument("--load_from_pretrained_model", default=False, action='store_true')
     parser.add_argument("--max_online_iters", type=int, default=200)
     parser.add_argument("--online_rtg", type=int, default=7200)
     parser.add_argument("--num_online_rollouts", type=int, default=1)
@@ -543,9 +558,12 @@ if __name__ == "__main__":
     # environment options
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--log_to_tb", "-w", type=bool, default=True)
-    parser.add_argument("--save_dir", type=str, default="./exp")
     parser.add_argument("--exp_name", type=str, default="default")
-
+    
+    # save and load 
+    parser.add_argument("--save_dir", type=str, default="pretrained_policy")
+    parser.add_argument("--load_dir", type=str, default="pretrained_policy")
+    
     args = parser.parse_args()
 
     ## print current args:
