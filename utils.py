@@ -32,7 +32,7 @@ def mkdir(path):
 def wandb_init(variant: dict) -> None:
     run = wandb.init(
         config=variant,
-        project=f'ExDT-{variant["env"]}',
+        project=f"{variant['pretrain_loss_fn']}->{variant['finetune_loss_fn']}-{variant['env']}",
         entity="ExDT",
         group=variant["group"],
         name=f"{variant['name']}-{variant['env']}-{str(uuid.uuid4())[:4]}",
