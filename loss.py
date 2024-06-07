@@ -74,8 +74,6 @@ class ODTLoss(LossAbstract):
         
         if scheduler is not None:
             scheduler.step()
-        
-        model.train()
         return (
             loss.detach().cpu().item(),
             nll.detach().cpu().item(),
@@ -102,14 +100,11 @@ class TRPOLoss(LossAbstract):
             log_likelihood = a_hat_dist.log_likelihood(a)[attention_mask > 0].mean()
             advantage = None # need to be implemented
             ratio = torch.exp(log_likelihood - behavioral_log_likelihood)
-
             bc_loss = -bc_reg * log_likelihood
             entropy = a_hat_dist.entropy().mean()
-
             loss = - advantage * ratio - bc_reg * log_likelihood # TRPO loss with dual gradient descent. 
 
             ## TODO if you want to implement TRPO logic, optimizer step must be in the inner loop.
-
             ## bc_reg must be tuned in here.
             log_temperature_optimizer.zero_grad()
             temperature_loss = (
@@ -117,7 +112,6 @@ class TRPOLoss(LossAbstract):
             )
             temperature_loss.backward()
             log_temperature_optimizer.step()
-
             return (
                 loss,
                 -log_likelihood,
@@ -198,15 +192,13 @@ class PPOLoss(LossAbstract):
             ordering,
             padding_mask=padding_mask,
         )
-        
+        info = {}
+                
         # Policy Evaluation
         value_loss = torch.nn.functional.mse_loss(value_preds[padding_mask > 0], value_target.clone()[:, :-1, :][padding_mask > 0]) # Value target starts from 1 to make TD loss
         value_optimizer.zero_grad()
         value_loss.backward()
-        
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm) #grad norm add for spike prevention
-
-        
         value_optimizer.step()
         
         action_target = actions.clone()
@@ -246,7 +238,8 @@ class PPOLoss(LossAbstract):
             current_step_values = value_preds.detach().clone()[:, :-1, :] # make it sure to detach the grad graph
             next_step_values = value_preds.detach().clone()[:, 1:, :] # (batch_size, seq_len, )
             advantage = current_step_rewards + gamma * next_step_values - current_step_values 
-            ratio = torch.exp((log_likelihood.mean() - behavioral_log_likelihood.mean()).clamp_(max=20)) # preventing nan exploding
+            advantage = (advantage - advantage.mean()) / advantage.std()
+            ratio = torch.exp((log_likelihood.mean() - behavioral_log_likelihood.mean()).clamp_(max=5)) # preventing nan exploding
             unclipped_loss = -advantage * ratio # adv weighted likelihood without last step
             clipped_loss = -advantage * torch.clamp(
                 ratio,
@@ -254,15 +247,13 @@ class PPOLoss(LossAbstract):
                 1. + clip_range
             )
             entropy = action_preds.entropy().mean()
-            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) - entropy_reg * entropy # 06/05 entropy exploration addition 
+            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) - 0.01 * entropy #- entropy_reg * entropy # 06/05 entropy exploration addition 
             
             ## TODO which is better? integrated loss or eval - improve iteration?
             
             policy_optimizer.zero_grad()
             ppo_loss.backward() ## TODO is this the optimal solution?
-            
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm) #grad norm add for spike prevention
-            
             policy_optimizer.step()
             
         log_temperature_optimizer.zero_grad()
