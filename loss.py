@@ -86,11 +86,11 @@ class ODTLoss(LossAbstract):
         
         wandb.log(info, commit=False)
                 
-            return (
-                loss.detach().cpu().item(),
-                nll.detach().cpu().item(),
-                entropy.detach().cpu().item(),
-            )
+        return (
+            loss.detach().cpu().item(),
+            nll.detach().cpu().item(),
+            entropy.detach().cpu().item(),
+        )
         
         
 
@@ -274,8 +274,8 @@ class PPOLoss(LossAbstract):
                 f"{self.pretraining}/train_loss": np.mean(total_loss.detach().cpu().item()),
                 f"{self.pretraining}/ppo_loss": ppo_loss.mean().detach().cpu().item(),
                 f"{self.pretraining}/value_loss": value_loss.mean().detach().cpu().item(),
-                f"{self.pretraining}/clipfrac": torch.mean((torch.abs(ratio-1.) > clip_range).float())
-                f"{self.pretraining}/approx_kl": 0.5 * torch.mean((log_likelihood.mean() - behavioral_log_likelihood.mean()) ** 2)
+                f"{self.pretraining}/clipfrac": torch.mean((torch.abs(ratio-1.) > clip_range).float()),
+                f"{self.pretraining}/approx_kl": 0.5 * torch.mean((log_likelihood.mean() - behavioral_log_likelihood.mean()) ** 2),
                 f"{self.pretraining}/nll": -log_likelihood.mean().detach().cpu().item(),
                 f"{self.pretraining}/entropy": entropy.detach().cpu().item(),
                 f"{self.pretraining}/temp_value": model.temperature().detach().cpu().item(),
