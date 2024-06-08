@@ -5,6 +5,8 @@ import torch
 import abc
 
 class LossAbstract(abc.ABC):    
+    def __init__(self, pretraining):
+        self.pretraining=pretraining
     @abc.abstractmethod
     def compute_loss(self, *args, **kwargs):
         pass
@@ -409,15 +411,15 @@ class ExDTLoss(LossAbstract):
             value_loss.detach().cpu().item()
         )
 
-def get_loss_function(loss_name: str) -> LossAbstract:
+def get_loss_function(loss_name: str, pretraining: str) -> LossAbstract:
     if loss_name == 'ODT':
-        return ODTLoss()
+        return ODTLoss(pretraining)
     elif loss_name == 'TRPO':
-        return TRPOLoss()
+        return TRPOLoss(pretraining)
     elif loss_name == 'PPO':
-        return PPOLoss()
+        return PPOLoss(pretraining)
     elif loss_name == 'ExDT':
-        return ExDTLoss()
+        return ExDTLoss(pretraining)
     else:
         raise ValueError(f'Loss function {loss_name} is not supported.')
     

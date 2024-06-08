@@ -77,7 +77,7 @@ class SequenceTrainer():
     def train_step_stochastic(self, loss_fn, trajs):
         trajs = [traj.to(self.device) for traj in trajs]
         states, actions, rewards, dones, rtg, values, timesteps, ordering, padding_mask = trajs
-        Loss_Class = get_loss_function(loss_fn)
+        Loss_Class = get_loss_function(loss_fn, self.pretraining)
         if loss_fn in ["ODT","TRPO"]:
             loss, nll, entropy = Loss_Class.compute_loss(
                 model=self.model, 
