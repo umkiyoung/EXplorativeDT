@@ -196,11 +196,10 @@ class PPOLoss(LossAbstract):
                 
         # Policy Evaluation
         value_loss = torch.nn.functional.mse_loss(value_preds[padding_mask > 0], value_target.clone()[:, :-1, :][padding_mask > 0]) # Value target starts from 1 to make TD loss
-        value_optimizer.zero_grad()
-        value_loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm) #grad norm add for spike prevention
-        value_optimizer.step()
-        
+        # value_optimizer.zero_grad()
+        # value_loss.backward()
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm) #grad norm add for spike prevention
+        # value_optimizer.step()
         action_target = actions.clone()
         
         # Policy Improvement
@@ -249,10 +248,12 @@ class PPOLoss(LossAbstract):
             entropy = action_preds.entropy().mean()
             ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) - 0.01 * entropy #- entropy_reg * entropy # 06/05 entropy exploration addition 
             
+            total_loss = ppo_loss + value_loss
+            
             ## TODO which is better? integrated loss or eval - improve iteration?
             
             policy_optimizer.zero_grad()
-            ppo_loss.backward() ## TODO is this the optimal solution?
+            total_loss.backward() ## TODO is this the optimal solution?
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm) #grad norm add for spike prevention
             policy_optimizer.step()
             
