@@ -64,25 +64,10 @@ class SequenceTrainer():
             losses.append(loss)
             nlls.append(nll)
             entropies.append(entropy)
-            log_data = {
-                f"{self.pretraining}/train_loss": np.mean(loss),
-                f"{self.pretraining}/nll": nll,
-                f"{self.pretraining}/entropy": entropy,
-                f"{self.pretraining}/temp_value": self.model.temperature().detach().cpu().item(),
-            }
-
-            if value is not None:
-                log_data[f"{self.pretraining}/value"] = value
-
-            wandb.log(
-                log_data,
-                step=(idx + dataloader.__len__() * finetuning_epoch + pretraining_epoch),
-                commit=False
-            )
 
         logs["time/training"] = time.time() - train_start
-        logs[f"{self.pretraining}/train_loss_mean"] = np.mean(losses)
-        logs[f"{self.pretraining}/train_loss_std"] = np.std(losses)
+        # logs[f"{self.pretraining}/train_loss_mean"] = np.mean(losses)
+        # logs[f"{self.pretraining}/train_loss_std"] = np.std(losses)
         #logs["training/nll"] = nlls[-1]
         #logs["training/entropy"] = entropies[-1]
         #logs["training/temp_value"] = self.model.temperature().detach().cpu().item()

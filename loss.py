@@ -1,3 +1,4 @@
+from collections import defaultdict
 from tqdm import trange, tqdm
 import torch
 
@@ -74,11 +75,22 @@ class ODTLoss(LossAbstract):
         
         if scheduler is not None:
             scheduler.step()
-        return (
-            loss.detach().cpu().item(),
-            nll.detach().cpu().item(),
-            entropy.detach().cpu().item(),
-        )
+            
+            
+        info = {
+            f"{self.pretraining}/train_loss": np.mean(loss.detach().cpu().item()),
+            f"{self.pretraining}/nll": nll.detach().cpu().item(),
+            f"{self.pretraining}/entropy": entropy.detach().cpu().item(),
+            f"{self.pretraining}/temp_value": model.temperature().detach().cpu().item(),
+        }
+        
+        wandb.log(info, commit=False)
+                
+            return (
+                loss.detach().cpu().item(),
+                nll.detach().cpu().item(),
+                entropy.detach().cpu().item(),
+            )
         
         
 
@@ -183,16 +195,15 @@ class PPOLoss(LossAbstract):
         gamma=0.99,
         max_grad_norm = 0.5
         ):
-        state_preds, action_preds, return_preds, value_preds = model.forward(
-            states,
-            actions,
-            rewards,
-            rtg[:, :-1],
-            timesteps,
-            ordering,
-            padding_mask=padding_mask,
-        )
-        info = {}
+        # state_preds, action_preds, return_preds, value_preds = model.forward(
+        #     states,
+        #     actions,
+        #     rewards,
+        #     rtg[:, :-1],
+        #     timesteps,
+        #     ordering,
+        #     padding_mask=padding_mask,
+        # )
                 
         # Policy Evaluation
         # value_loss = torch.nn.functional.mse_loss(value_preds[padding_mask > 0], value_target.clone()[:, :-1, :][padding_mask > 0]) # Value target starts from 1 to make TD loss
@@ -257,6 +268,21 @@ class PPOLoss(LossAbstract):
             total_loss.backward() ## TODO is this the optimal solution?
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm) #grad norm add for spike prevention
             policy_optimizer.step()
+            
+        
+            info = {
+                f"{self.pretraining}/train_loss": np.mean(total_loss.detach().cpu().item()),
+                f"{self.pretraining}/ppo_loss": ppo_loss.mean().detach().cpu().item(),
+                f"{self.pretraining}/value_loss": value_loss.mean().detach().cpu().item(),
+                f"{self.pretraining}/clipfrac": torch.mean((torch.abs(ratio-1.) > clip_range).float())
+                f"{self.pretraining}/approx_kl": 0.5 * torch.mean((log_likelihood.mean() - behavioral_log_likelihood.mean()) ** 2)
+                f"{self.pretraining}/nll": -log_likelihood.mean().detach().cpu().item(),
+                f"{self.pretraining}/entropy": entropy.detach().cpu().item(),
+                f"{self.pretraining}/temp_value": model.temperature().detach().cpu().item(),
+            }
+            
+            wandb.log(log_data, commit=False)
+            
             
         log_temperature_optimizer.zero_grad()
         temperature_loss = (
