@@ -404,8 +404,8 @@ class DecisionTransformer(TrajectoryModel):
 
     def clamp_action(self, action):
         return action.clamp(*self.action_range)
-    
-    
+
+
 
 class ValueDecisionTransformer(DecisionTransformer):
 
@@ -1420,4 +1420,79 @@ class GPT2Model(GPT2PreTrainedModel):
             hidden_states=all_hidden_states,
             attentions=all_self_attentions,
             cross_attentions=all_cross_attentions,
+        )
+        
+
+class BigValueDecisionTransformer(ValueDecisionTransformer):
+    def __init__(
+        self,
+        state_dim,
+        act_dim,
+        hidden_size,
+        action_range,
+        ordering=0,
+        max_length=None,
+        eval_context_length=None,
+        max_ep_len=4096,
+        action_tanh=True,
+        stochastic_policy=False,
+        init_temperature=0.1,
+        target_entropy=None,
+        gamma=0.99,
+        value_hidden_size=512,
+        policy_hidden_size=512,
+        **kwargs
+    ):
+        super().__init__(
+            state_dim,
+            act_dim,
+            hidden_size,
+            action_range,
+            ordering,
+            max_length,
+            eval_context_length,
+            max_ep_len,
+            action_tanh,
+            stochastic_policy,
+            init_temperature,
+            target_entropy,
+            gamma,
+            **kwargs
+        )
+        if stochastic_policy:
+            self.predict_action = nn.Sequential(
+                *(
+                    [nn.Linear(hidden_sizes, policy_hidden_size)]
+                    + [nn.ReLU()]
+                    + [nn.Linear(policy_hidden_size, policy_hidden_size)]
+                    + [nn.ReLU()]
+                    + [nn.Linear(policy_hidden_size, policy_hidden_size)]
+                    + [nn.ReLU()]
+                    + [DiagGaussianActor(policy_hidden_size, self.act_dim)]
+                )
+            )
+            
+        else:
+            self.predict_action = nn.Sequential(
+                *(
+                    [nn.Linear(hidden_sizes, value_hidden_size)]
+                    + ([nn.Tanh()] if action_tanh else [nn.ReLU()])
+                    + [nn.Linear(value_hidden_size, value_hidden_size)]
+                    + ([nn.Tanh()] if action_tanh else [nn.ReLU()])
+                    + [nn.Linear(value_hidden_size, value_hidden_size)]
+                    + ([nn.Tanh()] if action_tanh else [nn.ReLU()])
+                    + [nn.Linear(value_hidden_size, self.act_dim)]
+                )
+            )
+
+        self.predict_value = nn.Sequential(
+            *(
+                [nn.Linear(hidden_sizes, value_hidden_size)]
+                + [nn.ReLU()]
+                + [nn.Linear(value_hidden_size, value_hidden_size)]
+                + [nn.ReLU()]
+                + [nn.Linear(value_hidden_size, value_hidden_size)]
+                + [nn.ReLU()]
+                + [nn.Linear(value_hidden_size, 1)]
+            )
         )
