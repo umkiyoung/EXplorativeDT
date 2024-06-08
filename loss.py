@@ -195,7 +195,7 @@ class PPOLoss(LossAbstract):
         info = {}
                 
         # Policy Evaluation
-        value_loss = torch.nn.functional.mse_loss(value_preds[padding_mask > 0], value_target.clone()[:, :-1, :][padding_mask > 0]) # Value target starts from 1 to make TD loss
+        # value_loss = torch.nn.functional.mse_loss(value_preds[padding_mask > 0], value_target.clone()[:, :-1, :][padding_mask > 0]) # Value target starts from 1 to make TD loss
         # value_optimizer.zero_grad()
         # value_loss.backward()
         # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm) #grad norm add for spike prevention
@@ -232,6 +232,8 @@ class PPOLoss(LossAbstract):
                 padding_mask=padding_mask,
             )
             
+            value_loss = torch.nn.functional.mse_loss(value_preds[padding_mask > 0], value_target.clone()[:, :-1, :][padding_mask > 0]) # Value target starts from 1 to make TD loss
+            
             log_likelihood = action_preds.log_likelihood(action_target)[:, :-1][padding_mask[:, :-1] > 0]
             current_step_rewards = rewards[:, :-1, :]
             current_step_values = value_preds.detach().clone()[:, :-1, :] # make it sure to detach the grad graph
@@ -246,9 +248,8 @@ class PPOLoss(LossAbstract):
                 1. + clip_range
             )
             entropy = action_preds.entropy().mean()
-            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss)) - 0.01 * entropy #- entropy_reg * entropy # 06/05 entropy exploration addition 
-            
-            total_loss = ppo_loss + value_loss
+            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss))#- entropy_reg * entropy # 06/05 entropy exploration addition 
+            total_loss = ppo_loss +  0.5 * value_loss - 0.01 * entropy
             
             ## TODO which is better? integrated loss or eval - improve iteration?
             

@@ -153,7 +153,7 @@ class Experiment:
         folderpath = f"{path_prefix}/{self.variant['pretrain_loss_fn']}"
         
         if Path(f"{folderpath}/{self.variant['pretrain_loss_fn']}_{self.variant['env']}.pt").exists():
-            with open(f"{path_prefix}/model.pt", "rb") as f:
+            with open(f"{folderpath}/{self.variant['pretrain_loss_fn']}_{self.variant['env']}.pt", "rb") as f:
                 checkpoint = torch.load(f)
             self.model.load_state_dict(checkpoint["model_state_dict"])
             self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
@@ -567,7 +567,7 @@ if __name__ == "__main__":
     
     # save and load 
     parser.add_argument("--save_dir", type=str, default="")
-    parser.add_argument("--load_dir", type=str, default="")
+    parser.add_argument("--load_dir", type=str, default="pretrained_policy")
     
     args = parser.parse_args()
 
