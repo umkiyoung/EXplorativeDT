@@ -30,12 +30,13 @@ def mkdir(path):
     
     
 def wandb_init(variant: dict) -> None:
+    tuning_type = 'off-policy' if variant["off_policy_tuning"] else "on-policy"
     run = wandb.init(
         config=variant,
         project=f"{variant['env']}",
         entity="ExDT",
         group=variant["group"],
-        name=f"{variant['pretrain_loss_fn']}->{variant['finetune_loss_fn']}-{variant['env']}-{str(uuid.uuid4())[:4]}",
+        name=f"{variant['pretrain_loss_fn']}->{variant['finetune_loss_fn']}-{tuning_type}-{variant['env']}-{str(uuid.uuid4())[:4]}",
         id=str(uuid.uuid4()),
     )
     wandb.run.save()

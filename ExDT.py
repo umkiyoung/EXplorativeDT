@@ -301,14 +301,11 @@ class Experiment:
                         loss_fn=loss_fn,
                         dataloader=dataloader,
                     )
-                    
-                    if self.pretrain_iter % 1000 == 0:
-                        eval_outputs, eval_reward = self.evaluate(eval_fns)
-                        outputs.update(eval_outputs)
-                        outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']) * 100})
-
-                    
                     outputs = {"time/total": time.time() - self.start_time}
+                    eval_outputs, eval_reward = self.evaluate(eval_fns)
+                    outputs.update(eval_outputs)
+                    outputs.update({'result/normalized_score': d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm']) * 100})
+
                     outputs.update(train_outputs)
                     pbar.set_description(f"Pretraining | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'] * 100):.1f}")
                     wandb.log(outputs, commit=True)
