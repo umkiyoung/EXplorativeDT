@@ -1,6 +1,8 @@
 from collections import defaultdict
 from tqdm import trange, tqdm
+import numpy as np
 import torch
+import wandb
 
 import abc
 
@@ -283,7 +285,7 @@ class PPOLoss(LossAbstract):
                 f"{self.pretraining}/temp_value": model.temperature().detach().cpu().item(),
             }
             
-            wandb.log(log_data, commit=False)
+            wandb.log(info, commit=False)
             
             
         log_temperature_optimizer.zero_grad()
