@@ -115,23 +115,25 @@ class ODTValueLoss(LossAbstract):
         )
         
     def compute_loss(
-            self,
-            model, 
-            states, 
-            actions,
-            rewards,
-            rtg,
-            timesteps,
-            ordering,
-            padding_mask, 
-            policy_optimizer,
-            log_temperature_optimizer,
-            scheduler=None,
+        self,
+        model, 
+        states, 
+        actions,
+        rewards,
+        rtg,
+        timesteps,
+        ordering,
+        padding_mask, 
+        policy_optimizer,
+        value_target,
+        log_temperature_optimizer,
+        scheduler=None,
+        max_grad_norm = 0.5
         ):
         
         action_target = actions.clone()
         
-        _, action_preds, _, _ = model.forward(
+        _, action_preds, _, value_preds = model.forward(
             states,
             actions,
             rewards,
@@ -141,6 +143,7 @@ class ODTValueLoss(LossAbstract):
             padding_mask=padding_mask,
         )
         
+        
         loss, nll, entropy = self.loss_function(
             action_preds,
             action_target,
@@ -148,9 +151,11 @@ class ODTValueLoss(LossAbstract):
             model.temperature().detach(),
         )
         
+        value_loss = torch.nn.functional.mse_loss(value_preds[padding_mask > 0], value_target.clone()[:, :-1, :][padding_mask > 0]) # Value target starts from 1 to make TD loss
+        loss = loss + 0.5 * value_loss
         policy_optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.25)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
         policy_optimizer.step()
         
         log_temperature_optimizer.zero_grad()
@@ -506,6 +511,8 @@ class ExDTLoss(LossAbstract):
 def get_loss_function(loss_name: str, pretraining: str) -> LossAbstract:
     if loss_name == 'ODT':
         return ODTLoss(pretraining)
+    elif loss_name == 'ODT-Value':
+        return ODTValueLoss(pretraining)
     elif loss_name == 'TRPO':
         return TRPOLoss(pretraining)
     elif loss_name == 'PPO':
