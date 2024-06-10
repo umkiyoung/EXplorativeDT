@@ -6,7 +6,7 @@ python ./ExDT.py \
     --learning_from_offline_dataset \
     --device=$device  \
     --env=halfcheetah-medium-v2 \
-    --num_updates_per_pretrain_iter=500 \
+    --num_updates_per_pretrain_iter=5000 \
     --learning_rate=0.0001 \
     --weight_decay=0.0005 \
     --eval_context_length=5 \
