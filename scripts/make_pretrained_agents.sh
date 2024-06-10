@@ -3,7 +3,7 @@ device=cuda:1
 python ./ExDT.py \
     --env=halfcheetah-medium-v2 \
     --tag=$tag \
-    --pretrain_loss_fn=ODT \
+    --pretrain_loss_fn=ODT-Value \
     --finetune_loss_fn=ODT \
     --learning_from_offline_dataset \
     --device=$device  \
@@ -21,7 +21,7 @@ python ./ExDT.py \
 python ./ExDT.py \
     --env=halfcheetah-medium-replay-v2 \
     --tag=$tag \
-    --pretrain_loss_fn=ODT \
+    --pretrain_loss_fn=ODT-Value \
     --finetune_loss_fn=ODT \
     --learning_from_offline_dataset \
     --device=$device  \
@@ -39,7 +39,7 @@ python ./ExDT.py \
 python ./ExDT.py \
     --env=hopper-medium-v2 \
     --tag=$tag \
-    --pretrain_loss_fn=ODT \
+    --pretrain_loss_fn=ODT-Value \
     --finetune_loss_fn=ODT \
     --learning_from_offline_dataset \
     --device=$device  \
@@ -57,7 +57,7 @@ python ./ExDT.py \
 python ./ExDT.py \
     --env=hopper-medium-replay-v2 \
     --tag=$tag \
-    --pretrain_loss_fn=ODT \
+    --pretrain_loss_fn=ODT-Value \
     --finetune_loss_fn=ODT \
     --learning_from_offline_dataset \
     --device=$device  \
@@ -75,7 +75,7 @@ python ./ExDT.py \
 python ./ExDT.py \
     --env=walker2d-medium-v2 \
     --tag=$tag \
-    --pretrain_loss_fn=ODT \
+    --pretrain_loss_fn=ODT-Value \
     --finetune_loss_fn=ODT \
     --learning_from_offline_dataset \
     --device=$device  \
@@ -93,7 +93,7 @@ python ./ExDT.py \
 python ./ExDT.py \
     --env=walker2d-medium-replay-v2 \
     --tag=$tag \
-    --pretrain_loss_fn=ODT \
+    --pretrain_loss_fn=ODT-Value \
     --finetune_loss_fn=ODT \
     --learning_from_offline_dataset \
     --device=$device  \
