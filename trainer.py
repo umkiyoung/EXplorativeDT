@@ -5,6 +5,7 @@ This source code is licensed under the CC BY-NC license found in the
 LICENSE.md file in the root directory of this source tree.
 """
 
+from copy import deepcopy
 import numpy as np
 import torch
 import time
@@ -30,6 +31,7 @@ class SequenceTrainer():
         inner_epochs=10,
     ):
         self.model = model
+        self.behavioral_model = deepcopy(model)
         self.policy_optimizer = optimizer
         self.log_temperature_optimizer = log_temperature_optimizer
         self.scheduler = scheduler
@@ -114,6 +116,7 @@ class SequenceTrainer():
         elif loss_fn in ["PPO", "ExDT"]:
             loss, nll, entropy, value = Loss_Class.compute_loss(
                 model=self.model, 
+                behavioral_model=self.behavioral_model,
                 states=states, 
                 actions=actions,
                 rewards=rewards,
@@ -131,3 +134,6 @@ class SequenceTrainer():
                 scheduler=self.scheduler,
             )
             return loss, nll, entropy, value
+    
+    def update_behavioral_policy(self):
+        self.behavioral_model = deepcopy(self.model)

@@ -410,6 +410,7 @@ class Experiment:
                     pbar.set_description(f"Finetuning | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'] * 100):.1f}")
                     
                 outputs["time/total"] = time.time() - self.start_time
+                trainer.update_behavioral_policy() # for PPO on policy learning.
                 wandb.log(outputs, commit=False)
                 
                 # log the metrics
@@ -547,7 +548,7 @@ if __name__ == "__main__":
     # pretraining options
     parser.add_argument("--off_policy_tuning", default=False, action='store_true')
     parser.add_argument("--learning_from_offline_dataset", default=True, action='store_true') # if this is false, offline data is not adapted 
-    parser.add_argument("--max_pretrain_iters", type=int, default=1)
+    parser.add_argument("--max_pretrain_iters", type=int, default=1) 
     parser.add_argument("--num_updates_per_pretrain_iter", type=int, default=50)
 
     # finetuning options
@@ -562,8 +563,6 @@ if __name__ == "__main__":
 
     # environment options
     parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--log_to_tb", "-w", type=bool, default=True)
-    parser.add_argument("--exp_name", type=str, default="default")
     
     # save and load 
     parser.add_argument("--save_dir", type=str, default="")

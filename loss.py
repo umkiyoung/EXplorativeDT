@@ -269,6 +269,7 @@ class PPOLoss(LossAbstract):
     def compute_loss(
         self,
         model, 
+        behavioral_model,
         states, 
         actions,
         rewards,
@@ -309,9 +310,9 @@ class PPOLoss(LossAbstract):
         # before the inner epoch loop, each action must have the log_prob of the old policy
         # Turn off the dropout layer to stabilize the PPO ratio calculation
         # If there are no eval(), the ratio goes to inf
-        model.eval() 
+        behavioral_model.eval() 
         
-        state_preds, action_preds, return_preds, value_preds = model.forward(
+        state_preds, action_preds, return_preds, value_preds = behavioral_model.forward(
             states,
             actions,
             rewards,
