@@ -110,8 +110,8 @@ class Experiment:
         self.reward_scale = 1.0 if "antmaze" in variant["env"] else 0.001
         self.logger = utils.wandb_init(variant)
         self.tuning_type = 'Off policy' if self.variant["off_policy_tuning"] else "On policy"
-        if (self.variant["off_policy_tuning"]) and (self.variant['finetune_loss_fn']=='PPO'):
-            raise ValueError(f"{self.tuning_type} and {self.variant['finetune_loss_fn']} are not compatible each other")
+        # if (self.variant["off_policy_tuning"]) and (self.variant['finetune_loss_fn']=='PPO'):
+        #     raise ValueError(f"{self.tuning_type} and {self.variant['finetune_loss_fn']} are not compatible each other")
 
     def _get_env_spec(self, variant):
         env = gym.make(variant["env"])
@@ -308,7 +308,7 @@ class Experiment:
 
                     outputs.update(train_outputs)
                     pbar.set_description(f"Pretraining | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'] * 100):.1f}")
-                    wandb.log(outputs, commit=True)
+                    wandb.log(outputs, commit=False)
 
                     #self._save_model(
                     #     path_prefix=self.logger.log_path,
@@ -410,7 +410,7 @@ class Experiment:
                     pbar.set_description(f"Finetuning | evaluation: {d4rl.get_normalized_score(self.variant['env'], eval_outputs['evaluation/return_mean_gm'] * 100):.1f}")
                     
                 outputs["time/total"] = time.time() - self.start_time
-                wandb.log(outputs, commit=True)
+                wandb.log(outputs, commit=False)
                 
                 # log the metrics
                 # self.logger.log_metrics(
@@ -567,14 +567,14 @@ if __name__ == "__main__":
     
     # save and load 
     parser.add_argument("--save_dir", type=str, default="")
-    parser.add_argument("--load_dir", type=str, default="pretrained_policy")
+    parser.add_argument("--load_dir", type=str, default="")
     
     args = parser.parse_args()
 
     ## print current args:
-    print("Current args:")
-    for arg in vars(args):
-        print(f"{arg}: {getattr(args, arg)}")
+    # print("Current args:")
+    # for arg in vars(args):
+    #     print(f"{arg}: {getattr(args, arg)}")
     utils.set_seed_everywhere(args.seed)
     experiment = Experiment(vars(args))
 

@@ -93,6 +93,23 @@ class SequenceTrainer():
                 scheduler=self.scheduler,
             )
             return loss, nll, entropy, None
+        
+        elif loss_fn in ["ODT-Value"]:
+            loss, nll, entropy = Loss_Class.compute_loss(
+                model=self.model, 
+                states=states, 
+                actions=actions,
+                rewards=rewards,
+                rtg=rtg,
+                timesteps=timesteps,
+                ordering=ordering,
+                padding_mask=padding_mask, 
+                policy_optimizer=self.policy_optimizer,
+                value_target=values,
+                log_temperature_optimizer=self.log_temperature_optimizer,
+                scheduler=self.scheduler,
+            )
+            return loss, nll, entropy, None
             
         elif loss_fn in ["PPO", "ExDT"]:
             loss, nll, entropy, value = Loss_Class.compute_loss(

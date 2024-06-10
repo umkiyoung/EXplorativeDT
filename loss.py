@@ -1,7 +1,7 @@
 from collections import defaultdict
 from tqdm import trange, tqdm
-import numpy as np
 import torch
+import numpy as np
 import wandb
 
 import abc
@@ -22,7 +22,7 @@ class ODTLoss(LossAbstract):
         entropy_reg,
     ):
         # a_hat is a SquashedNormal Distribution
-        log_likelihood = a_hat_dist.log_likelihood(a)[attention_mask > 0].mean()
+        log_likelihood = a_hat_dist.log_likelihood(a)[:, :-1][attention_mask[:, :-1] > 0].mean()
         entropy = a_hat_dist.entropy().mean()
         loss = -(log_likelihood + entropy_reg * entropy)
         return (
@@ -88,7 +88,95 @@ class ODTLoss(LossAbstract):
             f"{self.pretraining}/temp_value": model.temperature().detach().cpu().item(),
         }
         
-        wandb.log(info, commit=False)
+        wandb.log(info, commit=True)
+                
+        return (
+            loss.detach().cpu().item(),
+            nll.detach().cpu().item(),
+            entropy.detach().cpu().item(),
+        )
+        
+class ODTValueLoss(LossAbstract):
+    def loss_function(
+        self,
+        a_hat_dist,
+        a,
+        attention_mask,
+        entropy_reg,
+    ):
+        # a_hat is a SquashedNormal Distribution
+        log_likelihood = a_hat_dist.log_likelihood(a)[:, :-1][attention_mask[:, :-1] > 0].mean()
+        entropy = a_hat_dist.entropy().mean()
+        loss = -(log_likelihood + entropy_reg * entropy)
+        return (
+            loss,
+            -log_likelihood,
+            entropy,
+        )
+        
+    def compute_loss(
+        self,
+        model, 
+        states, 
+        actions,
+        rewards,
+        rtg,
+        timesteps,
+        ordering,
+        padding_mask, 
+        policy_optimizer,
+        value_target,
+        log_temperature_optimizer,
+        scheduler=None,
+        max_grad_norm = 0.5
+        ):
+        
+        action_target = actions.clone()
+        
+        _, action_preds, _, value_preds = model.forward(
+            states,
+            actions,
+            rewards,
+            rtg[:, :-1],
+            timesteps,
+            ordering,
+            padding_mask=padding_mask,
+        )
+        
+        
+        loss, nll, entropy = self.loss_function(
+            action_preds,
+            action_target,
+            padding_mask,
+            model.temperature().detach(),
+        )
+        
+        value_loss = torch.nn.functional.mse_loss(value_preds[padding_mask > 0], value_target.clone()[:, :-1, :][padding_mask > 0]) # Value target starts from 1 to make TD loss
+        loss = loss + 0.5 * value_loss
+        policy_optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+        policy_optimizer.step()
+        
+        log_temperature_optimizer.zero_grad()
+        temperature_loss = (
+            model.temperature() * (entropy - model.target_entropy).detach()
+        )
+        temperature_loss.backward()
+        log_temperature_optimizer.step()
+        
+        if scheduler is not None:
+            scheduler.step()
+            
+            
+        info = {
+            f"{self.pretraining}/train_loss": np.mean(loss.detach().cpu().item()),
+            f"{self.pretraining}/nll": nll.detach().cpu().item(),
+            f"{self.pretraining}/entropy": entropy.detach().cpu().item(),
+            f"{self.pretraining}/temp_value": model.temperature().detach().cpu().item(),
+        }
+        
+        wandb.log(info, commit=True)
                 
         return (
             loss.detach().cpu().item(),
@@ -263,8 +351,8 @@ class PPOLoss(LossAbstract):
                 1. + clip_range
             )
             entropy = action_preds.entropy().mean()
-            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss))#- entropy_reg * entropy # 06/05 entropy exploration addition 
-            total_loss = ppo_loss +  0.5 * value_loss - 0.01 * entropy
+            ppo_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss))
+            total_loss = ppo_loss +  0.5 * value_loss # - entropy_reg * entropy
             
             ## TODO which is better? integrated loss or eval - improve iteration?
             
@@ -283,9 +371,16 @@ class PPOLoss(LossAbstract):
                 f"{self.pretraining}/nll": -log_likelihood.mean().detach().cpu().item(),
                 f"{self.pretraining}/entropy": entropy.detach().cpu().item(),
                 f"{self.pretraining}/temp_value": model.temperature().detach().cpu().item(),
+                f"{self.pretraining}/advantage_mean": (current_step_rewards + gamma * next_step_values - current_step_values).mean().detach().cpu().item(),
+                f"{self.pretraining}/advantage_std": (current_step_rewards + gamma * next_step_values - current_step_values).std().detach().cpu().item(),
+                f"{self.pretraining}/value_target_mean": value_target.mean().detach().cpu().item(),
+                f"{self.pretraining}/value_pred_mean": value_preds.mean().detach().cpu().item(),
+                f"{self.pretraining}/value_pred_std": value_preds.std().detach().cpu().item(),
+                f"{self.pretraining}/reward_mean": rewards.mean().detach().cpu().item(),
+                f"{self.pretraining}/rtg_mean": rtg.mean().detach().cpu().item()
             }
             
-            wandb.log(info, commit=False)
+            wandb.log(info, commit=True)
             
             
         log_temperature_optimizer.zero_grad()
@@ -416,6 +511,8 @@ class ExDTLoss(LossAbstract):
 def get_loss_function(loss_name: str, pretraining: str) -> LossAbstract:
     if loss_name == 'ODT':
         return ODTLoss(pretraining)
+    elif loss_name == 'ODT-Value':
+        return ODTValueLoss(pretraining)
     elif loss_name == 'TRPO':
         return TRPOLoss(pretraining)
     elif loss_name == 'PPO':

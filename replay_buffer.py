@@ -138,7 +138,7 @@ class TransformSamplingSubTraj:
         ss = (ss - self.state_mean) / self.state_std
 
         aa = np.concatenate([np.zeros((self.max_len - tlen, self.act_dim)), aa])
-        rr = np.concatenate([np.zeros((self.max_len - tlen, 1)), rr])
+        rr = np.concatenate([np.zeros((self.max_len - tlen, 1)), rr]) * self.reward_scale
         dd = np.concatenate([np.ones((self.max_len - tlen)) * 2, dd])
         rtg = (
             np.concatenate([np.zeros((self.max_len - tlen, 1)), rtg])

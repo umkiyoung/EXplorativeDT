@@ -1,8 +1,8 @@
-device=cuda:1
+device=cuda:0
 python ./ExDT.py \
     --tag=$tag \
     --pretrain_loss_fn=ODT \
-    --finetune_loss_fn=ODT \
+    --finetune_loss_fn=PPO \
     --learning_from_offline_dataset \
     --device=$device  \
     --env=halfcheetah-medium-v2 \
@@ -12,6 +12,5 @@ python ./ExDT.py \
     --eval_context_length=5 \
     --eval_rtg=6000 \
     --online_rtg=12000 \
-    --num_updates_per_online_iter=300 \
-    --off_policy_tuning \
-
+    --num_updates_per_online_iter=30 \
+    --load_dir=pretrained_policy
