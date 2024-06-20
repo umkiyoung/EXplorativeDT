@@ -1,7 +1,7 @@
 device=cuda:0
 python ./ExDT.py \
     --tag=$tag \
-    --pretrain_loss_fn=ODT \
+    --pretrain_loss_fn=ODT-Value \
     --finetune_loss_fn=PPO \
     --learning_from_offline_dataset \
     --device=$device  \

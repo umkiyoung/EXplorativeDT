@@ -1,5 +1,5 @@
 device=cuda:1
-
+"""
 python ./ExDT.py \
     --env=halfcheetah-medium-v2 \
     --tag=$tag \
@@ -88,6 +88,7 @@ python ./ExDT.py \
     --num_updates_per_online_iter=300 \
     --off_policy_tuning \
     --save_dir=pretrained_policy &
+
 
 
 python ./ExDT.py \

@@ -12,5 +12,5 @@ python ./ExDT.py \
     --eval_context_length=5 \
     --eval_rtg=6000 \
     --online_rtg=12000 \
-    --num_updates_per_online_iter=1 \
+    --num_updates_per_online_iter \
 
